@@ -1,0 +1,53 @@
+{
+  "name": "gsn-playground",
+  "version": "0.0.1",
+  "description": "GSN tests",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "@opengsn/gsn": "^0.9.0",
+    "cross-env": "^7.0.2",
+    "dotenv-cli": "^3.1.0",
+    "npm-run-all": "^4.1.5",
+    "wighawag_newsh": "^0.0.5"
+  },
+  "workspaces": {
+    "packages": [
+      "contracts",
+      "webapp",
+      "subgraph",
+      "web3w"
+    ],
+    "nohoist": [
+      "gsn-playground-subgraph/@graphprotocol/graph-ts",
+      "gsn-playground-subgraph/@graphprotocol/graph-ts/**",
+      "gsn-playground-contracts/@nomiclabs/buidler",
+      "gsn-playground-contracts/@nomiclabs/buidler/**",
+      "gsn-playground-contracts/buidler-deploy",
+      "gsn-playground-contracts/buidler-ethers-v5",
+      "gsn-playground-webapp",
+      "gsn-playground-webapp/**"
+    ]
+  },
+  "scripts": {
+    "externals-down": "docker-compose down -v",
+    "externals-conf": "dotenv -e ./contracts/.env docker-compose config",
+    "gsn:relayer:run": "gsn relayer-run --Workdir gsn-relayer --DevMode",
+    "shell:gsn:relayer:run": "newsh \"npm run gsn:relayer:run\"",
+    "gsn:relayer:register": "wait-on tcp:8090 && gsn relayer-register",
+    "gsn:setup": "wait-on tcp:8545 && wait-on -d 5000 tcp:8545 && gsn deploy && gsn paymaster-fund",
+    "gsn:bootstrap": "npm-run-all -l gsn:setup --parallel gsn:relayer:run gsn:relayer:register",
+    "shell:gsn:bootstrap": "npm-run-all -l gsn:setup --parallel shell:gsn:relayer:run gsn:relayer:register",
+    "externals": "dotenv -e ./contracts/.env docker-compose up",
+    "shell:externals": "newsh \"npm run externals\"",
+    "subgraph:setup": "npm --prefix subgraph run local:setup",
+    "subgraph:deploy": "npm --prefix subgraph run local:deploy ../contracts/deployments/localhost_0x0539 mainnet",
+    "contracts:deploy": "npm --prefix contracts run local:deploy -- --export ../webapp/src/contracts/development.json",
+    "shell:contracts:deploy": "newsh \"npm run contracts:deploy\"",
+    "contracts:seed": "npm --prefix contracts run seed",
+    "webapp": "npm --prefix webapp run dev",
+    "shell:webapp": "newsh \"npm run webapp\"",
+    "dev": "npm-run-all -l externals-down --parallel webapp externals gsn:bootstrap --sequential subgraph:setup contracts:deploy subgraph:deploy",
+    "shell:dev": "npm-run-all -l externals-down --parallel shell:webapp shell:externals shell:gsn:bootstrap --sequential subgraph:setup contracts:deploy subgraph:deploy"
+  }
+}

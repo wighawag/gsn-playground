@@ -1,0 +1,25 @@
+{
+  "name": "gsn-playground-subgraph",
+  "description": "Subgraph (thegraph.com) for GSN Playground",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.18.0",
+    "@graphprotocol/graph-ts": "^0.18.0",
+    "cross-var": "^1.1.0",
+    "dotenv-cli": "^3.1.0",
+    "fs-extra": "^9.0.0",
+    "handlebars": "^4.7.6",
+    "wait-on": "^4.0.1"
+  },
+  "scripts": {
+    "local:setup": "wait-on http-get://127.0.0.1:8000 && graph create gsn-playground/gsn-playground --node http://127.0.0.1:8020",
+    "codegen": "rm -Rf generated && graph codegen",
+    "build": "graph build",
+    "generate": "node scripts/generate.js",
+    "local:redeploy": "graph codegen && wait-on http://127.0.0.1:5001/api/v0/version http-get://127.0.0.1:8000 && graph deploy gsn-playground/gsn-playground --ipfs http://localhost:5001 --node http://127.0.0.1:8020",
+    "local:deploy": "npm-run-all \"generate -- {1} {2}\" local:redeploy --",
+    "mainnet:deploy": "dotenv -- cross-var graph deploy --access-token $THEGRAPH_TOKEN gsn-playground/gsn-playground --ipfs https://api.thegraph.com/ipfs/ --node https://api.thegraph.com/deploy/ --debug"
+  }
+}

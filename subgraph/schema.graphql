@@ -1,0 +1,4 @@
+type NamedEntity @entity {
+  id: ID!
+  name: String!
+}

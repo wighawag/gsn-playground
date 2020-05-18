@@ -1,0 +1,25 @@
+specVersion: 0.0.2
+description: GSN Playground
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: GSNPlayground
+    network: {{chainName}}
+    source:
+      address: '{{contracts.GSNPlayground.address}}'
+      abi: GSNPlaygroundContract
+      startBlock: {{contracts.GSNPlayground.receipt.blockNumber}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.3
+      language: wasm/assemblyscript
+      entities:
+        - NamedEntity
+      abis:
+        - name: GSNPlaygroundContract
+          file: ./abis/GSNPlayground.json
+      eventHandlers:
+        - event: NameChanged(indexed address,string)
+          handler: handleNameChanged
+      file: ./src/mapping.ts

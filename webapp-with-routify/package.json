@@ -1,0 +1,47 @@
+{
+  "name": "gsn-playground-webapp",
+  "version": "0.0.1",
+  "description": "webapp for GSN playground",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@ethersproject/bignumber": "^5.0.0-beta.139",
+    "@ethersproject/bytes": "^5.0.0-beta.138",
+    "@ethersproject/contracts": "^5.0.0-beta.152",
+    "@ethersproject/providers": "^5.0.0-beta.166",
+    "@ethersproject/solidity": "^5.0.0-beta.132",
+    "@ethersproject/wallet": "^5.0.0-beta.141",
+    "@sveltech/routify": "^1.5.9",
+    "svelte": "^3.20.1",
+    "web3w": "0.0.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-alias": "^3.1.0",
+    "@rollup/plugin-commonjs": "11.0.2",
+    "@rollup/plugin-json": "^4.0.3",
+    "@rollup/plugin-node-resolve": "^7.1.3",
+    "concurrently": "^5.1.0",
+    "cross-env": "^7.0.2",
+    "del": "^5.1.0",
+    "npm-run-all": "^4.1.5",
+    "ppid-changed": "^1.0.1",
+    "rollup": "^2.6.1",
+    "rollup-plugin-copy": "^3.3.0",
+    "rollup-plugin-livereload": "^1.2.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-node-globals": "^1.4.0",
+    "rollup-plugin-svelte": "^5.2.1",
+    "rollup-plugin-terser": "^5.3.0",
+    "spassr": "^1.0.2"
+  },
+  "scripts": {
+    "dev": "run-p routify rollup",
+    "dev-dynamic": "cross-env BUNDLING=dynamic npm run dev",
+    "build": "npm run routify -- -b && rollup -c",
+    "serve": "spassr --serve-spa --serve-ssr",
+    "serve-up": "spassr -d ./ -a dist/__app.html --serve-spa --serve-ssr",
+    "export": "routify export",
+    "rollup": "rollup -cw",
+    "routify": "routify -D"
+  }
+}

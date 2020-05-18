@@ -1,0 +1,17 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Attach",
+            "type": "chrome",
+            "request": "attach",
+            "port": 9222,
+            "url": "http://localhost:3000",
+            // "sourceMaps": false,
+            "pathMapping": {
+                "/_dist_": "${workspaceFolder}/src",
+            },
+            "webRoot": "${workspaceFolder}/public"
+        }
+    ]
+}

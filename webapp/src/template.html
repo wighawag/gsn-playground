@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="theme-color" content="#333333" />
+
+    %sapper.base%
+
+    <!-- <link rel='manifest' href='manifest.json' crossorigin='use-credentials'> -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    %sapper.styles% %sapper.head%
+
+    <style>
+      /* TODO make it the default : 100% */
+
+      html, body { 
+        width:100%; 
+        height:100%; 
+        margin:0;
+        padding:0;
+        overflow: hidden; /* keeps scrollbar off IE */
+      }
+      canvas:focus{ 
+        outline:none;
+      }
+      #sapper {
+        width:100%; 
+        height:100%; 
+        margin:0;
+        padding:0;
+        overflow: hidden; /* keeps scrollbar off IE */
+      }
+      main { 
+        width:100%; 
+        height:100%; 
+        margin:0;
+        padding:0;
+        overflow: hidden; /* keeps scrollbar off IE */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sapper">%sapper.html%</div>
+    %sapper.scripts%
+  </body>
+</html>
