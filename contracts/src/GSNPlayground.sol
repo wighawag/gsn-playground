@@ -1,15 +1,20 @@
 pragma solidity 0.6.5;
 
-contract GSNPlayground {
+// TODO import "./MetaTransaction/MetaTxReceiverBase.sol";
+import "./MetaTransaction/MetaTxReceiverBaseWithInitialTrustedForwarder.sol";
+
+contract GSNPlayground is MetaTxReceiverBaseWithInitialTrustedForwarder {
     event NameChanged(address indexed user, string name);
 
     function setName(string calldata name) external {
-        _names[msg.sender] = name;
-        emit NameChanged(msg.sender, name);
+        address sender = _msgSender();
+        _names[sender] = name;
+        emit NameChanged(sender, name);
     }
 
     // ////////////////// CONSTRUCTOR /////////////////////////////
-    constructor() public {
+    constructor(ForwarderRegistry forwarderRegistry, address trustedForwarder)
+        public MetaTxReceiverBaseWithInitialTrustedForwarder(forwarderRegistry, trustedForwarder) {
         _owner = msg.sender;
     }
 

@@ -100,6 +100,8 @@ export function proxyContract(contractToProxy, name, observers) {
         return functionsProxy;
       } else if (contractToProxy.functions[prop]) {
         return proxyCall(contractToProxy.functions, prop);
+      } else if (prop === "_proxiedContract") {
+        return contractToProxy;
       } else {
         return obj[prop];
       }

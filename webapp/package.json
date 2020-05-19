@@ -11,7 +11,7 @@
     "@ethersproject/providers": "^5.0.0-beta.166",
     "@ethersproject/solidity": "^5.0.0-beta.132",
     "@ethersproject/wallet": "^5.0.0-beta.141",
-    "web3w": "0.0.1",
+    "@opengsn/gsn": "^0.9.0",
     "apollo-boost": "^0.4.7",
     "apollo-cache-inmemory": "^1.6.5",
     "apollo-client": "^2.6.8",
@@ -23,6 +23,7 @@
     "isomorphic-unfetch": "^3.0.0",
     "subscriptions-transport-ws": "^0.9.0",
     "svelte-apollo": "^0.3.0",
+    "web3w": "0.0.1",
     "websocket": "^1.0.31"
   },
   "devDependencies": {

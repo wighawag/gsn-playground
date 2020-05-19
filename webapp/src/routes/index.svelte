@@ -12,7 +12,8 @@
   import userflow from "../stores/userflow";
 
   import SetUserNameFlow from "../flows/SetUserNameFlow";
-  const flows = {SetUserNameFlow}
+  import SetUserNameViaGSN from "../flows/SetUserNameViaGSN";
+  const flows = {SetUserNameFlow, SetUserNameViaGSN}
 </script>
 
 {#if !$names.status}

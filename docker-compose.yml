@@ -44,6 +44,8 @@ services:
     entrypoint:
       - node
       - /app/ganache-core.docker.cli.js
+      - --networkId
+      - '1337' #this ensure metamask work with eip712 chainId on domain
       - --deterministic
       - --mnemonic
       - '${MNEMONIC-minimum symptom minute gloom tragic situate silver mechanic salad amused elite beef}'

@@ -278,6 +278,8 @@ function proxyContract(contractToProxy, name, observers) {
         return functionsProxy;
       } else if (contractToProxy.functions[prop]) {
         return proxyCall(contractToProxy.functions, prop);
+      } else if (prop === "_proxiedContract") {
+        return contractToProxy;
       } else {
         return obj[prop];
       }
@@ -393,10 +395,7 @@ const $wallet = {
       error: undefined,
       blockNumber: undefined
     },
-    contracts: {
-      status: undefined, // Loading | Ready
-      error: undefined
-    },
+    contracts: {},
     status: undefined, // Loading | Locked | Ready
     address: undefined,
     
@@ -444,7 +443,9 @@ function reset(fields) {
 // //////////////////////////////////////////////////////////////////////////////
 
 let _ethersProvider;
-let _builtinProvider;
+let _web3Provider;
+let _builtinEthersProvider;
+let _builtinWeb3Provider;
 let _chainConfigs;
 
 function isHex(value) {
@@ -520,6 +521,7 @@ async function setupChain(address) {
   set({chain: {status: 'Loading'}});
 
   let contractsToAdd = {};
+  let addresses = {};
   let contractsInfos = {};
   const {chainId} = await _ethersProvider.getNetwork();
   if (_chainConfigs) {
@@ -557,13 +559,17 @@ async function setupChain(address) {
         throw error;
       }
       const contractInfo = contractsInfos[contractName];
-      contractsToAdd[contractName] = proxyContract(new Contract(contractInfo.address, contractInfo.abi, _ethersProvider.getSigner(address)), contractName, _observers);
+      if (contractInfo.abi) {
+        contractsToAdd[contractName] = proxyContract(new Contract(contractInfo.address, contractInfo.abi, _ethersProvider.getSigner(address)), contractName, _observers);
+      }
+      addresses[contractName] = contractInfo.address;
     }
   }
   set({
     chain: {
       status: 'Ready',
-      chainId
+      chainId,
+      addresses,
     },
     contracts: {
       ...contractsToAdd,
@@ -602,9 +608,11 @@ async function select(type) {
   reset(["address", "status", "message", "selected", "lock"]);
   set({selected: type, previousType: $wallet.selected, status: "Loading", error: undefined});
   _ethersProvider = null;
+  _web3Provider = null;
   if (type === 'builtin') {
     await probeBuiltin();
-    _ethersProvider = _builtinProvider;
+    _ethersProvider = _builtinEthersProvider;
+    _web3Provider = _builtinWeb3Provider;
   }
 
   if (!_ethersProvider) {
@@ -654,11 +662,12 @@ function probeBuiltin(config = {}) {
     try {
       let ethereum = await fetchEthereum();
       if (ethereum) {
-        _builtinProvider = proxyWeb3Provider(new Web3Provider(ethereum), _observers);
+        _builtinWeb3Provider = ethereum;
+        _builtinEthersProvider = proxyWeb3Provider(new Web3Provider(ethereum), _observers);
         set({builtin: {status: "Available", vendor: getVendor(ethereum)}}); 
         // if (config.metamaskReloadFix && $wallet.builtin.vendor === "Metamask") {
         //   // see https://github.com/MetaMask/metamask-extension/issues/7221
-        //   await timeout(1000, _builtinProvider.send("eth_chainId", []), () => {
+        //   await timeout(1000, _builtinEthersProvider.send("eth_chainId", []), () => {
         //     // window.location.reload();
         //     console.log('RELOAD');
         //   }); 
@@ -764,7 +773,7 @@ var index = (config) => {
       connect,
       unlock,
       get contracts() {
-        return $wallet.contracts; // TODO remove status ?
+        return $wallet.contracts;
       },
       // logout,
       get address() {
@@ -772,6 +781,12 @@ var index = (config) => {
       },
       get provider() {
         return _ethersProvider;
+      },
+      get web3Provider() {
+        return _web3Provider;
+      },
+      get chain() {
+        return $wallet.chain;
       },
       // get fallBackProvider() {
       //   return _fallBackProvider;

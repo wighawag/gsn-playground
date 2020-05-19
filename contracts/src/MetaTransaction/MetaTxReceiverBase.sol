@@ -14,7 +14,7 @@ abstract contract MetaTxReceiverBase {
         assembly { signer := mload(sub(add(data, length), 0x00)) }
         address payable sender = msg.sender;
         if(sender != address(_forwarderRegistry) && !_forwarderRegistry.isForwarderFor(signer, sender)) {
-            signer = sender;    
+            signer = sender;
         }
     }
 }

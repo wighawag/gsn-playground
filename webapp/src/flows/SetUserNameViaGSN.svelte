@@ -4,22 +4,19 @@
 	import Modal from '../components/Modal.svelte';
 
   let name = "";
-  let useGSN = false;
 </script>
 
 {#if $wallet.status === "Ready"}
 
 {#if $wallet.chain.status === "Ready"}
-<Modal on:close="{() => userflow.cancel()}" confirmButton="Confirm" on:confirm="{() => userflow.setName_confirm(name, useGSN)}">
+<Modal on:close="{() => userflow.cancel()}" confirmButton="Confirm" on:confirm="{() => userflow.setNameGSN_confirm(name)}">
   <h2 slot="header">
    Set Your Name
   </h2>
 
   <div>
     <!-- TODO show DAI balance and warn when cannot buy // DAI balance could be shown in navbar (once connected)-->
-    <input type="checkbox" id="useGSN" name="useGSN" bind:checked={useGSN}><label for="useGSN">use GSN</label>
-  
-    <input type="text" id="name" name="name" bind:value="{name}"/>
+    <input type="text" name="name" bind:value="{name}"/>
     <label for="name">Name</label>
   </div>
 </Modal>

@@ -68,25 +68,28 @@ contract ForwarderRegistry {
             require(signer == Utilities.recoverSigner(keccak256(dataToHash), signature), "SIGNATURE_INVALID");
         }
 
-        forwarderData.approved = 1;
+        forwarderData.approved = approved ? 1 : 0;
         forwarderData.nonce = uint248(nonce+1);
         emit ForwarderApproved(signer, forwarder, approved, nonce);
+    }
+
+    function _chainId() internal virtual view returns(uint256 chainId) {
+        assembly { chainId := chainid() }
     }
 
     // //////////////////////////// SIGNED MESSAGE ENCODING //////////////////////////////////////////
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId)");
     bytes32 constant EIP712DOMAIN_NAME = keccak256("ForwarderRegistry");
     bytes32 constant APPROVAL_TYPEHASH = keccak256("ApproveForwarder(address signer,uint256 nonce,address forwarder,bool approved)");
-    function _encodeMessage(address signer, uint256 nonce, address forwarder, bool approved) internal pure returns (bytes memory) {
-        uint256 chainId;
-        assembly { chainId := chainid() }
+    function _encodeMessage(address signer, uint256 nonce, address forwarder, bool approved) internal view returns (bytes memory) {
+        
         return abi.encodePacked(
             "\x19\x01",
-            abi.encode(
+            keccak256(abi.encode(
                 EIP712DOMAIN_TYPEHASH,
                 EIP712DOMAIN_NAME,
-                chainId
-            ),
+                _chainId()
+            )),
             keccak256(abi.encode(
                 APPROVAL_TYPEHASH,
                 signer,
@@ -98,7 +101,7 @@ contract ForwarderRegistry {
     }
 
     // ////////////////////////////  INTERNAL STORAGE  ///////////////////////////////////////////
-    struct Forwarder {
+    struct Forwarder { // pack nonce and approval together
         uint248 nonce;
         uint8 approved;
     }
@@ -107,7 +110,7 @@ contract ForwarderRegistry {
 
 library Utilities {
     // ///////////////////////////// UTILITIES //////////////////////////////////////////////////
-    function recoverSigner(bytes32 digest, bytes memory signature) internal pure returns(address) {
+    function recoverSigner(bytes32 digest, bytes memory signature) internal pure returns(address recovered) {
         require(signature.length == 65, "SIGNATURE_INVALID_LENGTH");
         bytes32 r;
         bytes32 s;
@@ -117,7 +120,14 @@ library Utilities {
             s := mload(add(signature, 64))
             v := byte(0, mload(add(signature, 96)))
         }
-        return ecrecover(digest, v, r, s);
+        // Version of signature should be 27 or 28, but 0 and 1 are also possible versions
+        if (v < 27) {
+            v += 27;
+        }
+        require(v == 27 || v == 28, "SIGNATURE_INVALID_V");
+
+        recovered = ecrecover(digest, v, r, s);
+        require(recovered != address(0), "SIGNATURE_ZERO_ADDRESS");
     }
 
     function isContract(address addr) internal view returns(bool) {
@@ -125,7 +135,6 @@ library Utilities {
         bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 
         bytes32 codehash;
-        // solium-disable-next-line security/no-inline-assembly
         assembly {
             codehash := extcodehash(addr)
         }
