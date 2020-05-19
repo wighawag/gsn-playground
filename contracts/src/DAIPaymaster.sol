@@ -4,11 +4,22 @@ pragma experimental ABIEncoderV2;
 import "./GSN/BasePaymaster.sol";
 import "./GSN/interfaces/IRelayHub.sol";
 import "./Interfaces/Dai.sol";
+import "./Interfaces/UniswapV2Router1.sol";
 
 contract DAIPaymaster is BasePaymaster {
+    event TokensCharged(uint256 gasUseWithoutPost, uint256 ethActualCharge, uint256 tokenActualCharge);
+
     Dai immutable internal _dai;
-    constructor(IRelayHub relayHub, Dai dai) public BasePaymaster(relayHub) {
+    address immutable _weth;
+    UniswapV2Router1 immutable _uniswapRouter;
+    constructor(IRelayHub relayHub, Dai dai, address weth, UniswapV2Router1 uniswapRouter) public BasePaymaster(relayHub) {
         _dai = dai;
+        _weth = weth;
+        _uniswapRouter = uniswapRouter;
+    }
+
+    function setup() external {
+        _dai.approve(address(_uniswapRouter), uint256(-1));
     }
 
     //return the payer of this request.
@@ -36,56 +47,49 @@ contract DAIPaymaster is BasePaymaster {
         address payer = this.getPayer(relayRequest); // call to itself as a poor decoder of struct type
 
         uint256 ethMaxCharge = _relayHub.calculateCharge(maxPossibleGas, relayRequest.gasData);
-        uint256 tokenPreCharge = ethMaxCharge;
-        // TODO _uniswapV2Router01.getTokenToEthOutputPrice(ethMaxCharge);
-        //uint256[] memory amounts = router.getAmountsOut(eth, [WETH, TOKEN]);
-        // uint256 tokenPreCharge = amounts[1];
+        uint256 daiPrecharge = _getDAIAmountForETH(ethMaxCharge);
 
-        require(tokenPreCharge < _dai.balanceOf(payer), "balance too low");
+        require(daiPrecharge < _dai.balanceOf(payer), "balance too low");
 
-        bytes memory permitArgs;
-        if (tokenPreCharge > _dai.allowance(payer, address(this))) {
-            permitArgs = _callValidPermit(payer, relayRequest.encodedFunction);
+        if (daiPrecharge > _dai.allowance(payer, address(this))) {
+            _checkValidPermit(payer, approvalData);
         }
-        return permitArgs;
+        return abi.encode(payer, daiPrecharge, approvalData);
     }
 
-    function _callPermit(bytes memory context) internal {
-        (address payer, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(context, (address, uint256, uint256, uint8, bytes32, bytes32));
+    function _getDAIAmountForETH(uint256 eth) internal view returns (uint256) {
+        address[] memory path = new address[](2); path[0] = _weth; path[1] = address(_dai);
+        uint256[] memory amounts = _uniswapRouter.getAmountsOut(eth, path);
+        return amounts[1];
+    }
+
+    function _callPermit(address payer, bytes memory approvalData) internal {
+        (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(approvalData, (uint256, uint256, uint8, bytes32, bytes32));
         _dai.permit(payer, address(this), nonce, expiry, true, v, r, s);
     }
 
-    function _callValidPermit(address payer, bytes memory data) internal view returns (bytes memory permitArgs) {
-        (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = _extractPermitArgs(data);
+    function _checkValidPermit(address payer, bytes memory approvalData) internal view returns (bytes memory permitArgs) {
+        (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(approvalData, (uint256, uint256, uint8, bytes32, bytes32));
         require(_isValidPermit(payer, address(this), nonce, expiry, true, v, r, s), "invalid permit");
-        permitArgs = abi.encode(payer, nonce, expiry, v, r, s); // TODO abi.encodeWithSelector to have the whole encoded data ready (including: holder, spender and allowed)
     }
 
-    function _extractPermitArgs(bytes memory data) internal pure
-        returns(uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) 
-    {    
-        uint256 length = data.length;
-        assembly { s := mload(sub(add(data, length), 0x00)) }
-        assembly { r := mload(sub(add(data, length), 0x20)) }
-        assembly { v := mload(sub(add(data, length), 0x40)) }
-        // assembly { allowed := mload(sub(add(data, length), 0x60)) } // is true
-        assembly { expiry := mload(sub(add(data, length), 0x60)) }
-        assembly { nonce := mload(sub(add(data, length), 0x80)) }
-        // assembly { spender := mload(sub(add(data, length), 0xC0)) } // is address(this)
-        // assembly { holder := mload(sub(add(data, length), 0xE0)) } // is payer
-    }
+    // function _extractPermitArgs(bytes memory data) internal pure
+    //     returns(uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) 
+    // {    
+    //     uint256 length = data.length;
+    //     assembly { s := mload(sub(add(data, length), 0x00)) }
+    //     assembly { r := mload(sub(add(data, length), 0x20)) }
+    //     assembly { v := mload(sub(add(data, length), 0x40)) }
+    //     // assembly { allowed := mload(sub(add(data, length), 0x60)) } // is true
+    //     assembly { expiry := mload(sub(add(data, length), 0x60)) }
+    //     assembly { nonce := mload(sub(add(data, length), 0x80)) }
+    //     // assembly { spender := mload(sub(add(data, length), 0xC0)) } // is address(this)
+    //     // assembly { holder := mload(sub(add(data, length), 0xE0)) } // is payer
+    // }
 
     function _isValidPermit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) internal view returns(bool) {
         return true; // TODO
     }
-
-    // function getSlice(bytes data, uint256 begin, uint256 end) internal pure returns (bytes memory slice) {
-    //     slice = new bytes(end-begin+1);
-    //     for(uint i=0;i<=end-begin;i++){
-    //         a[i] = data[i+begin-1];
-    //     }
-    //     return slice;
-    // }
 
     /** this method is called before the actual relayed function call.
      * It may be used to charge the caller before
@@ -101,11 +105,14 @@ contract DAIPaymaster is BasePaymaster {
      * (that is, the relay will still get compensated)
      */
     function preRelayedCall(bytes calldata context) external override relayHubOnly returns (bytes32) {
-        if (context.length > 0) {
-            _callPermit(context);
+        (address payer, uint daiPrecharge, bytes memory approvalData) = abi.decode(context, (address, uint256, bytes));
+        if (approvalData.length > 0) {
+            _callPermit(payer, approvalData);
         }
-        // TODO preCharge here to ensure balance is available
-        // see TokenPaymaster
+
+        if (daiPrecharge != 0) {
+            _dai.transferFrom(payer, address(this), daiPrecharge); // TODO give it to the relayhub directly no ?
+        }
         return bytes32(0);
     }
 
@@ -135,7 +142,30 @@ contract DAIPaymaster is BasePaymaster {
         uint256 gasUseWithoutPost,
         GSNTypes.GasData calldata gasData
     ) external override relayHubOnly {
-        // TODO refund extra charge
-        // see TokenPaymaster
+        (address payer, uint256 daiPrecharge,) = abi.decode(context, (address, uint256, bytes));
+        uint256 ethActualCharge;
+        uint256 justPost;
+        uint256 daiActualCharge;
+
+        if (daiPrecharge == 0) {
+            justPost = 10000; // TODO gasUsedByPostWithoutPreCharge;
+            ethActualCharge = _relayHub.calculateCharge(gasUseWithoutPost + justPost, gasData);
+            daiActualCharge = _getDAIAmountForETH(ethActualCharge);
+
+            //no precharge. we pay now entire sum.
+            require(_dai.transferFrom(payer, address(this), daiActualCharge), "failed transfer");
+        } else {
+            justPost = 10000; //gasUsedByPostWithoutPreCharge;
+            ethActualCharge = _relayHub.calculateCharge(gasUseWithoutPost + justPost, gasData);
+            daiActualCharge = _getDAIAmountForETH(ethActualCharge);
+
+            //refund payer
+            require(_dai.transfer(payer, daiPrecharge - daiActualCharge), "failed refund");
+        }
+
+        address[] memory path = new address[](2); path[0] = address(_dai); path[1] = _weth;
+        _uniswapRouter.swapTokensForExactETH(ethActualCharge, uint(-1), path, address(this), block.timestamp+60*15);
+        _relayHub.depositFor{value:ethActualCharge}(address(this));
+        emit TokensCharged(gasUseWithoutPost, ethActualCharge, daiActualCharge);
     }
 }
