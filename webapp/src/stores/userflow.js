@@ -2,6 +2,8 @@ import { writable } from "svelte/store";
 import { wallet } from "./wallet";
 import gsn from "./gsn";
 import { BigNumber } from "@ethersproject/bignumber";
+import {defaultAbiCoder} from "@ethersproject/abi";
+import {splitSignature} from "@ethersproject/bytes";
 import { EIP712Signer } from "../lib/eip712";
 
 function wait(t, v) {
@@ -62,8 +64,76 @@ export default dataStore = {
   async setName_confirm(userName, useGSN) {
     _set({ step: "SendingTx" });
     console.log({ address: wallet.address, userName, useGSN });
+
+    const chainId = wallet.chain.chainId;
+
     let tx;
     if (useGSN) {
+      // TODO only if DAIPayMaster
+      const currentAllowance = await wallet.contracts.DAI.callStatic.allowance(wallet.address, wallet.chain.addresses.DAIPaymaster);
+      if (currentAllowance.eq(0)) {
+        const currentNonce = await wallet.contracts.DAI.callStatic.nonces(wallet.address);
+        console.log({currentNonce: currentNonce.toNumber(), chainId})
+        const message = {
+          holder: wallet.address,
+          spender: wallet.chain.addresses.DAIPaymaster,
+          nonce: currentNonce.toNumber(),
+          expiry: 0, // Math.floor(Date.now() / 1000) + 3600, // TODO
+          allowed: true
+        };
+        console.log({permitMessage : message});
+        const eip712Struct = {
+          types : {
+            EIP712Domain:[
+              {name:"name",type:"string"},
+              {name:"version",type:"string"},
+              {name:"chainId",type:"uint256"},
+              {name:"verifyingContract",type:"address"}
+            ],
+            Permit:[
+              {name:"holder",type:"address"},
+              {name:"spender",type:"address"},
+              {name:"nonce",type:"uint256"},
+              {name:"expiry",type:"uint256"},
+              {name:"allowed",type:"bool"}
+            ],
+          },
+          domain: {name:"Dai Stablecoin",version:"1",verifyingContract: wallet.chain.addresses.DAI, chainId},
+          primaryType: 'Permit',
+        };
+        const eip712Message = JSON.stringify({
+          ...eip712Struct,
+          message
+        });
+
+        let signature;
+        try {
+          signature = await wallet.provider.send('eth_signTypedData_v4', [wallet.address, eip712Message]);
+        } catch (e) {
+
+        }
+
+        if (!signature) {
+          console.log('No Sig');
+          _set({ step: "setName" }); // TODO back function
+          return;
+        }
+
+        signature = splitSignature(signature);
+
+        const approvalData = defaultAbiCoder.encode(["uint256", "uint256", "uint8", "bytes32", "bytes32"], [
+          message.nonce,
+          message.expiry,
+          signature.v,
+          signature.r,
+          signature.s
+        ]);
+        gsn.setApprovalData(approvalData);
+      } else {
+        console.log("dai permit for paymaster : " + currentAllowance.toHexString());
+      }
+      // ////////////////////////////////
+
       const forwarder = wallet.chain.addresses["Forwarder"];
       const forwarderIsApproved = await wallet.contracts.ForwarderRegistry.isForwarderFor(wallet.address, forwarder);
       if (forwarderIsApproved) {
@@ -72,7 +142,6 @@ export default dataStore = {
           userName
         );
       } else {
-        const chainId = wallet.chain.chainId;
 
         // TODO: this is actually a reported bug in MetaMask. Should be:
         // chainId: network.chainId

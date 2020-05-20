@@ -13,7 +13,11 @@ contract FakeUniswapV2Router is UniswapV2Router1 {
     
     function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] calldata path, address to, uint256 deadline)
     external override returns (uint256[] memory amounts) {
-        ERC20(path[0]).transferFrom(msg.sender, address(this), amountOut * _eth2dai);
+        // TODO 
+        // amounts = new uint256[](2);
+        // amounts[0] = amountOut * _eth2dai;
+        // amounts[1] = amountOut;
+        ERC20(path[0]).transferFrom(msg.sender, address(this), amountOut);
         payable(to).transfer(amountOut);
     }
 

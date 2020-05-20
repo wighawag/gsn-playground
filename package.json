@@ -35,7 +35,7 @@
     "gsn:relayer:run": "gsn relayer-run --Workdir gsn-relayer --DevMode",
     "shell:gsn:relayer:run": "newsh \"npm run gsn:relayer:run\"",
     "gsn:relayer:register": "wait-on tcp:8090 && gsn relayer-register",
-    "gsn:setup": "rm -Rf gsn-relayer && wait-on tcp:8545 && wait-on -d 5000 tcp:8545 && gsn deploy && cp -R build/gsn/* contracts/deployments/localhost_0x0539  && gsn paymaster-fund",
+    "gsn:setup": "rm -Rf gsn-relayer && rm -Rf contracts/deployments/localhost_0x0539/DAI.json && wait-on tcp:8545 && wait-on -d 5000 tcp:8545 && gsn deploy && cp -R build/gsn/* contracts/deployments/localhost_0x0539  && gsn paymaster-fund",
     "gsn:bootstrap": "npm-run-all -l gsn:setup --parallel gsn:relayer:run gsn:relayer:register",
     "shell:gsn:bootstrap": "npm-run-all -l gsn:setup --parallel shell:gsn:relayer:run gsn:relayer:register",
     "externals": "dotenv -e ./contracts/.env docker-compose up",

@@ -4,9 +4,12 @@ import "../Interfaces/ERC20.sol";
 import "../MetaTransaction/ForwarderRegistry.sol";
 import "../MetaTransaction/MetaTxReceiverBase.sol";
 
-contract SimpleERC20TokenWithInitialBalance is MetaTxReceiverBase, ERC20 {
-    string public constant name = "Simple";
-    string public constant symbol = "SIMPLE";
+contract SimpleERC20TokenWithInitialBalance is /* TODO MetaTxReceiverBase,*/ ERC20 {
+
+    // TODO use MetaTxReceiverBase
+    function  _msgSender() internal view returns (address payable signer) {
+       signer = msg.sender;
+    }
 
     ///////////////// EVENTS FOR ERC20 ////////////////
     event Transfer(address indexed from, address indexed to, uint256 value);
@@ -23,7 +26,7 @@ contract SimpleERC20TokenWithInitialBalance is MetaTxReceiverBase, ERC20 {
     constructor(
         uint256 supply,
         ForwarderRegistry forwarderRegistry
-    ) public MetaTxReceiverBase(forwarderRegistry) {
+    ) public /* TODO MetaTxReceiverBase(forwarderRegistry) */ {
         _totalSupply = supply;
     }
 

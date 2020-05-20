@@ -15,8 +15,8 @@ import "./interfaces/IRelayHub.sol";
 abstract contract BasePaymaster is IPaymaster {
     // Gas stipends for acceptRelayedCall, preRelayedCall and postRelayedCall
     uint256 private constant ACCEPT_RELAYED_CALL_GAS_LIMIT = 50000;
-    uint256 private constant PRE_RELAYED_CALL_GAS_LIMIT = 100000;
-    uint256 private constant POST_RELAYED_CALL_GAS_LIMIT = 110000;
+    uint256 private constant PRE_RELAYED_CALL_GAS_LIMIT = 200000; // TODO check
+    uint256 private constant POST_RELAYED_CALL_GAS_LIMIT = 550000; // TODO check
 
     IRelayHub immutable internal _relayHub;
 

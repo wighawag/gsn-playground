@@ -10,23 +10,26 @@ contract DAIPaymaster is BasePaymaster {
     event TokensCharged(uint256 gasUseWithoutPost, uint256 ethActualCharge, uint256 tokenActualCharge);
 
     Dai immutable internal _dai;
-    address immutable _weth;
-    UniswapV2Router1 immutable _uniswapRouter;
+    address immutable internal _weth;
+    UniswapV2Router1 immutable internal _uniswapRouter;
+
+    bytes32 internal immutable DOMAIN_SEPARATOR;
+    // bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)");
+    bytes32 internal constant PERMIT_TYPEHASH = 0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb;
+
     constructor(IRelayHub relayHub, Dai dai, address weth, UniswapV2Router1 uniswapRouter) public BasePaymaster(relayHub) {
+        DOMAIN_SEPARATOR = dai.DOMAIN_SEPARATOR();
+        dai.approve(address(uniswapRouter), uint256(-1));
+
         _dai = dai;
         _weth = weth;
         _uniswapRouter = uniswapRouter;
     }
 
-    function setup() external {
-        _dai.approve(address(_uniswapRouter), uint256(-1));
-    }
-
     //return the payer of this request.
-    // for account-based target, this is the target account.
-    function getPayer(GSNTypes.RelayRequest calldata relayRequest) external pure returns (address) {
-        return relayRequest.target;
-    }
+    // function getPayer(GSNTypes.RelayRequest calldata relayRequest) external pure returns (address) {
+    //     return relayRequest.relayData.senderAddress;
+    // }
 
     /**
      * Called by Relay (and RelayHub), to validate if this recipient accepts this call.
@@ -44,7 +47,7 @@ contract DAIPaymaster is BasePaymaster {
         bytes calldata approvalData,
         uint256 maxPossibleGas
     ) external override view returns (bytes memory) {
-        address payer = this.getPayer(relayRequest); // call to itself as a poor decoder of struct type
+        address payer = relayRequest.relayData.senderAddress;
 
         uint256 ethMaxCharge = _relayHub.calculateCharge(maxPossibleGas, relayRequest.gasData);
         uint256 daiPrecharge = _getDAIAmountForETH(ethMaxCharge);
@@ -57,6 +60,13 @@ contract DAIPaymaster is BasePaymaster {
         return abi.encode(payer, daiPrecharge, approvalData);
     }
 
+    function deposit() external payable {
+        _relayHub.depositFor{value: msg.value}(address(this));
+    }
+
+    receive() external payable {}
+    fallback() external payable {}
+
     function _getDAIAmountForETH(uint256 eth) internal view returns (uint256) {
         address[] memory path = new address[](2); path[0] = _weth; path[1] = address(_dai);
         uint256[] memory amounts = _uniswapRouter.getAmountsOut(eth, path);
@@ -68,7 +78,7 @@ contract DAIPaymaster is BasePaymaster {
         _dai.permit(payer, address(this), nonce, expiry, true, v, r, s);
     }
 
-    function _checkValidPermit(address payer, bytes memory approvalData) internal view returns (bytes memory permitArgs) {
+    function _checkValidPermit(address payer, bytes memory approvalData) internal view {
         (uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) = abi.decode(approvalData, (uint256, uint256, uint8, bytes32, bytes32));
         require(_isValidPermit(payer, address(this), nonce, expiry, true, v, r, s), "invalid permit");
     }
@@ -87,8 +97,25 @@ contract DAIPaymaster is BasePaymaster {
     //     // assembly { holder := mload(sub(add(data, length), 0xE0)) } // is payer
     // }
 
+    // duplicate DAI permit logic as DAI do not have a way to static_call the verification
     function _isValidPermit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) internal view returns(bool) {
-        return true; // TODO
+        bytes32 digest =
+            keccak256(abi.encodePacked(
+                "\x19\x01",
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH,
+                                     holder,
+                                     spender,
+                                     nonce,
+                                     expiry,
+                                     allowed))
+        ));
+
+        require(holder != address(0), "Dai/invalid-address-0");
+        require(holder == ecrecover(digest, v, r, s), "Dai/invalid-permit");
+        require(expiry == 0 || now <= expiry, "Dai/permit-expired");
+        require(nonce == _dai.nonces(holder), "Dai/invalid-nonce");
+        return true;
     }
 
     /** this method is called before the actual relayed function call.
