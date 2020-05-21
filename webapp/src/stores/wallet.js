@@ -5,7 +5,8 @@ const { wallet, transactions } = WalletStore({
   log: console,
   debug: true,
   chainConfigs: contractsInfo,
-  builtin: { autoProbe: true, metamaskReloadFix: true }
+  builtin: { autoProbe: true },
+  autoSelectPrevious: true
 });
 
 // TODO remove

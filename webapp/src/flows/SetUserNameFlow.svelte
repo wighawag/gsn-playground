@@ -6,8 +6,6 @@
   let name = "";
   let useGSN = false;
   let useDAI = false;
-
-  $: daiChoice = useGSN && useDAI;
 </script>
 
 {#if $wallet.status === "Ready"}
@@ -24,7 +22,11 @@
         <span>GSN</span>
       </label>
       <label>
-        <input type="checkbox" class="nes-checkbox" bind:checked="{daiChoice}" class:disabled="{!useGSN}" disabled={!useGSN}>
+        {#if useGSN}
+        <input type="checkbox" class="nes-checkbox" bind:checked="{useDAI}" class:disabled="{!useGSN}" disabled={!useGSN}>
+        {:else}
+        <input type="checkbox" class="nes-checkbox disabled" checked="" disabled="true">
+        {/if}
         <span class:disabled="{!useGSN}">DAI</span>
       </label>
     <div>
@@ -42,7 +44,7 @@
 {:else if $wallet.status === "Loading"}
 <Modal on:close="{() => userflow.cancel()}">loading</Modal>
 {:else if $wallet.status === "Locked"}
-<Modal on:close="{() => userflow.cancel()}">locked</Modal>
+<Modal on:close="{() => userflow.cancel()}" confirmButton="unlock", on:confirm="{() => wallet.unlock()}">locked</Modal>
 {:else if !$wallet.builtin}
 <Modal on:close="{() => userflow.cancel()}">Error probe need to be called</Modal>
 {:else if $wallet.builtin.status === "None"} <!-- assume probe was called-->

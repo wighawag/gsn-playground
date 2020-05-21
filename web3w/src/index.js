@@ -143,6 +143,16 @@ const _observers = {
   }
 }
 
+const LOCAL_STORAGE_SLOT = "_web3w_previous_wallet_type"
+function recordSelection(type) {
+  localStorage.setItem(LOCAL_STORAGE_SLOT, type);
+}
+
+function fetchPreviousSelection() {
+  return localStorage.getItem(LOCAL_STORAGE_SLOT);
+}
+
+
 async function setupChain(address) {
   set({chain: {status: 'Loading'}});
 
@@ -262,6 +272,7 @@ async function select(type) {
     set({error: e});
     throw e;
   }
+  recordSelection(type);
   const address = accounts && accounts[0];
   if (address) {
     set({
@@ -393,11 +404,18 @@ export default (config) => {
     window.$wallet = $wallet;
     window.$transactions = $transactions;
   }
-  
-  if (process.browser && config.builtin.autoProbe) {
-    probeBuiltin(config.builtin);
-  }
 
+  if (process.browser) {
+    if (config.autoSelectPrevious) {
+      const type = fetchPreviousSelection();
+      if (type) {
+        select(type);
+      }
+    } else if (config.builtin.autoProbe) {
+      probeBuiltin(config.builtin);
+    }
+  }
+  
   return {
     transactions: {
       subscribe: transactionsStore.subscribe

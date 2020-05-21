@@ -10,18 +10,26 @@
   //// ---------- SERVER SIDE RENDERRING ----------- ///
 
   import userflow from "../stores/userflow";
+  import dai from "../stores/dai";
+
+  import {BigNumber} from "@ethersproject/bignumber";
 
   import SetUserNameFlow from "../flows/SetUserNameFlow";
-  import SetUserNameViaGSN from "../flows/SetUserNameViaGSN";
-  const flows = {SetUserNameFlow, SetUserNameViaGSN}
+  const flows = {SetUserNameFlow}
 </script>
 
 <div id="nescss">
+  <p style="position: fixed;top:0px; z-index: 1000; right:0px;">
+    {#if $dai.balance}
+    DAI: {BigNumber.from($dai.balance).div("10000000000000000").toNumber() / 100}
+    {/if}
+  </p>
   <header>
     <div class="container">
       <div class="nav-brand">
         <h1>META TX</h1>
         <p>OpenGSN with user control and DAI payment</p>
+        
       </div>
     </div>
   </header>
@@ -31,7 +39,7 @@
   
       <!-- About -->
       <section class="topic">
-        <h2 id="about"><a href="#about">#</a>Set Your Name</h2>
+        <h2># Set Your Name</h2>
         <button class="nes-btn is-primary" on:click="{() => userflow.setName_start()}">Set your Name</button>
       </section>
 
