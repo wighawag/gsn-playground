@@ -13,7 +13,7 @@ let _interval;
 function listen() {
   stopListenning();
   _interval = setInterval(async () => {
-    if (wallet.contracts.DAI) {
+    if (wallet.address && wallet.contracts.DAI) {
       let balance;
       try {
         balance = await wallet.contracts.DAI.callStatic.balanceOf(wallet.address);
@@ -36,7 +36,7 @@ function stopListenning() {
 }
 
 wallet.subscribe((walletData) => {
-  if (walletData.chain && walletData.chain.status == "Ready") {
+  if (walletData.address && walletData.chain && walletData.chain.status == "Ready") {
     listen();
   } else {
     stopListenning();

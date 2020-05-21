@@ -348,6 +348,27 @@ function aknowledgeError(field) {
   }
 }
 
+function logout() {
+  set({
+    balance: {
+      status: undefined, // Loading | Ready
+      amount: undefined,
+      error: undefined,
+      blockNumber: undefined
+    },
+    contracts: {},
+    status: undefined, // Loading | Locked | Ready
+    address: undefined,
+    
+    selection: undefined,  // wallet Types available
+    selected: undefined,
+    
+    error: undefined,
+    // pendingUserConfirmation: undefined, // TODO ? block logout on waiting ?
+  });
+  recordSelection("");
+}
+
 let unlocking;
 function unlock() {
   if (unlocking) {
@@ -408,7 +429,7 @@ export default (config) => {
   if (process.browser) {
     if (config.autoSelectPrevious) {
       const type = fetchPreviousSelection();
-      if (type) {
+      if (type && type !== "") {
         select(type);
       }
     } else if (config.builtin.autoProbe) {
@@ -428,7 +449,7 @@ export default (config) => {
       get contracts() {
         return $wallet.contracts;
       },
-      // logout,
+      logout,
       get address() {
         return $wallet.address;
       },

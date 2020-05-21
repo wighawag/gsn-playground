@@ -11,6 +11,7 @@
 
   import userflow from "../stores/userflow";
   import dai from "../stores/dai";
+  import {wallet} from "../stores/wallet";
 
   import {BigNumber} from "@ethersproject/bignumber";
 
@@ -22,6 +23,9 @@
   <p style="position: fixed;top:0px; z-index: 1000; right:0px;">
     {#if $dai.balance}
     DAI: {BigNumber.from($dai.balance).div("10000000000000000").toNumber() / 100}
+    {/if}
+    {#if $wallet.status === "Ready" || $wallet.status === "Locked"}
+    <button class="nes-btn is-error" on:click="{() => wallet.logout()}">logout</button>
     {/if}
   </p>
   <header>
