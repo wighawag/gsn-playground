@@ -43,16 +43,19 @@ function _set(obj) {
 //   // if ($wallet.status)
 // }
 
+async function cancel() {
+  _set({ flow: undefined, step: undefined, data: undefined });
+}
+async function acknownledgeSuccess() {
+  // TODO automatic ?
+  _set({ flow: undefined, step: undefined, data: undefined });
+}
+
 let dataStore;
 export default dataStore = {
   subscribe,
-  async cancel() {
-    _set({ flow: undefined, step: undefined, data: undefined });
-  },
-  async acknownledgeSuccess() {
-    // TODO automatic ?
-    _set({ flow: undefined, step: undefined, data: undefined });
-  },
+  cancel,
+  acknownledgeSuccess,
   /////////////////////// SET NAME /////////////////////////////
   async setName_start() {
     if ($data.flow) {
@@ -61,86 +64,95 @@ export default dataStore = {
     await wallet.probeBuiltin();
     _set({ flow: "SetUserNameFlow", step: "setName" });
   },
-  async setName_confirm(userName, useGSN) {
+  async setName_confirm(userName, useGSN, useDAI) {
     _set({ step: "SendingTx" });
-    console.log({ address: wallet.address, userName, useGSN });
+    console.log({ address: wallet.address, userName, useGSN, useDAI });
 
     const chainId = wallet.chain.chainId;
 
     let tx;
     if (useGSN) {
-      // TODO only if DAIPayMaster
-      const currentAllowance = await wallet.contracts.DAI.callStatic.allowance(wallet.address, wallet.chain.addresses.DAIPaymaster);
-      if (currentAllowance.eq(0)) {
-        const currentNonce = await wallet.contracts.DAI.callStatic.nonces(wallet.address);
-        console.log({currentNonce: currentNonce.toNumber(), chainId})
-        const message = {
-          holder: wallet.address,
-          spender: wallet.chain.addresses.DAIPaymaster,
-          nonce: currentNonce.toNumber(),
-          expiry: 0, // Math.floor(Date.now() / 1000) + 3600, // TODO
-          allowed: true
-        };
-        console.log({permitMessage : message});
-        const eip712Struct = {
-          types : {
-            EIP712Domain:[
-              {name:"name",type:"string"},
-              {name:"version",type:"string"},
-              {name:"chainId",type:"uint256"},
-              {name:"verifyingContract",type:"address"}
-            ],
-            Permit:[
-              {name:"holder",type:"address"},
-              {name:"spender",type:"address"},
-              {name:"nonce",type:"uint256"},
-              {name:"expiry",type:"uint256"},
-              {name:"allowed",type:"bool"}
-            ],
-          },
-          domain: {name:"Dai Stablecoin",version:"1",verifyingContract: wallet.chain.addresses.DAI, chainId},
-          primaryType: 'Permit',
-        };
-        const eip712Message = JSON.stringify({
-          ...eip712Struct,
-          message
-        });
+      if (useDAI) {
+        const currentAllowance = await wallet.contracts.DAI.callStatic.allowance(wallet.address, wallet.chain.addresses.DAIPaymaster);
+        if (currentAllowance.eq(0)) {
+          const currentNonce = await wallet.contracts.DAI.callStatic.nonces(wallet.address);
+          console.log({currentNonce: currentNonce.toNumber(), chainId})
+          const message = {
+            holder: wallet.address,
+            spender: wallet.chain.addresses.DAIPaymaster,
+            nonce: currentNonce.toNumber(),
+            expiry: 0, // Math.floor(Date.now() / 1000) + 3600, // TODO
+            allowed: true
+          };
+          console.log({permitMessage : message});
+          const eip712Struct = {
+            types : {
+              EIP712Domain:[
+                {name:"name",type:"string"},
+                {name:"version",type:"string"},
+                {name:"chainId",type:"uint256"},
+                {name:"verifyingContract",type:"address"}
+              ],
+              Permit:[
+                {name:"holder",type:"address"},
+                {name:"spender",type:"address"},
+                {name:"nonce",type:"uint256"},
+                {name:"expiry",type:"uint256"},
+                {name:"allowed",type:"bool"}
+              ],
+            },
+            domain: {name:"Dai Stablecoin",version:"1",verifyingContract: wallet.chain.addresses.DAI, chainId},
+            primaryType: 'Permit',
+          };
+          const eip712Message = JSON.stringify({
+            ...eip712Struct,
+            message
+          });
 
-        let signature;
-        try {
-          signature = await wallet.provider.send('eth_signTypedData_v4', [wallet.address, eip712Message]);
-        } catch (e) {
+          let signature;
+          try {
+            signature = await wallet.provider.send('eth_signTypedData_v4', [wallet.address, eip712Message]);
+          } catch (e) {
 
+          }
+
+          if (!signature) {
+            console.log('No Sig');
+            return cancel();
+            return;
+          }
+
+          signature = splitSignature(signature);
+
+          const approvalData = defaultAbiCoder.encode(["uint256", "uint256", "uint8", "bytes32", "bytes32"], [
+            message.nonce,
+            message.expiry,
+            signature.v,
+            signature.r,
+            signature.s
+          ]);
+          gsn.setApprovalData(approvalData);
+        } else {
+          gsn.setApprovalData("0x");
+          console.log("dai permit for paymaster : " + currentAllowance.toHexString());
         }
+        // ////////////////////////////////
 
-        if (!signature) {
-          console.log('No Sig');
-          _set({ step: "setName" }); // TODO back function
-          return;
-        }
-
-        signature = splitSignature(signature);
-
-        const approvalData = defaultAbiCoder.encode(["uint256", "uint256", "uint8", "bytes32", "bytes32"], [
-          message.nonce,
-          message.expiry,
-          signature.v,
-          signature.r,
-          signature.s
-        ]);
-        gsn.setApprovalData(approvalData);
-      } else {
-        console.log("dai permit for paymaster : " + currentAllowance.toHexString());
       }
-      // ////////////////////////////////
 
+      const gsnContracts = useDAI ? gsn.dai_contracts : gsn.contracts;
+      
       const forwarder = wallet.chain.addresses["Forwarder"];
       const forwarderIsApproved = await wallet.contracts.ForwarderRegistry.isForwarderFor(wallet.address, forwarder);
       if (forwarderIsApproved) {
         console.log("Forwarder approved : " + forwarder);
-        tx = await gsn.contracts.GSNPlayground.setName(
-          userName
-        );
+        try {
+          tx = await gsnContracts.GSNPlayground.setName(
+            userName
+          );
+        } catch (e) {
+          return cancel();
+        }
       } else {
 
         // TODO: this is actually a reported bug in MetaMask. Should be:
@@ -189,8 +201,7 @@ export default dataStore = {
 
         if (!signature) {
           console.log('No Sig');
-          _set({ step: "setName" }); // TODO back function
-          return;
+          return cancel();
         }
         
 
@@ -199,14 +210,22 @@ export default dataStore = {
         // bytes32 constant APPROVAL_TYPEHASH = keccak256("ApproveForwarder(address signer,uint256 nonce,address forwarder,bool approved)");
         
         const {to, data} = await wallet.contracts.GSNPlayground.populateTransaction.setName(userName);
-        tx = await gsn.contracts.ForwarderRegistry.approveAndForward(signature, to, data, {gasLimit: 3000000}); // gasLimit is necessary else ethers will reject the tx as failing
+        try {
+          tx = await gsnContracts.ForwarderRegistry.approveAndForward(signature, to, data, {gasLimit: 3000000}); // gasLimit is necessary else ethers will reject the tx as failing
+        } catch(e) {
+          return cancel();
+        }
       }
     } else {
-      tx = await wallet.contracts.GSNPlayground.setName(
-        userName
-      );
+      console.log({userName});
+      try {
+        tx = await wallet.contracts.GSNPlayground._proxiedContract.functions.setName(userName);
+      } catch (e) {
+        return cancel();
+      }
     }
-    _set({ step: "Success", data: { txHash: tx.hash } });
+    // _set({ step: "Success", data: { txHash: tx.hash } });
+    acknownledgeSuccess();
   },
   ///////////////////////////////////////////////////////////
   ////////////////// SET NAME VIA GSN ///////////////////////

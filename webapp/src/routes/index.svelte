@@ -16,18 +16,43 @@
   const flows = {SetUserNameFlow, SetUserNameViaGSN}
 </script>
 
-{#if !$names.status}
-  <div>Name not loaded</div>
-{:else if $names.status === 'error'}
-  <div>Error</div>
-{:else if $names.status === 'loading'}
-  <div>Loading Names...</div>
-{:else}
-  {#each $names.data as name, index}
-    <li>{name.id} : {name.name}</li>
-  {/each}
-{/if}
+<div id="nescss">
+  <header>
+    <div class="container">
+      <div class="nav-brand">
+        <h1>META TX</h1>
+        <p>OpenGSN with user control and DAI payment</p>
+      </div>
+    </div>
+  </header>
 
-<button on:click="{() => userflow.setName_start()}">Set your Name</button>
+  <div class="container">
+    <main class="main-content">
+  
+      <!-- About -->
+      <section class="topic">
+        <h2 id="about"><a href="#about">#</a>Set Your Name</h2>
+        <button class="nes-btn is-primary" on:click="{() => userflow.setName_start()}">Set your Name</button>
+      </section>
+
+      <section class="topic with-title">
+        <h3 class="title">existing names</h3>
+        {#if !$names.status}
+          <div>Name not loaded</div>
+        {:else if $names.status === 'error'}
+          <div>Error</div>
+        {:else if $names.status === 'loading'}
+          <div>Loading Names...</div>
+        {:else}
+          {#each $names.data as name, index}
+            <li>{name.id} : {name.name}</li>
+          {/each}
+        {/if}
+      </section>
+      
+
+    </main>
+  </div>
+</div>
 
 <svelte:component this={flows[$userflow.flow]}/>

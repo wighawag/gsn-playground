@@ -44,21 +44,34 @@
 
 <div class="modal-background" on:click={close}></div>
 
-<div class="modal" role="dialog" aria-modal="true" bind:this={modal}>
-	<slot name="header"></slot>
+<!-- <div class="modal" role="dialog" aria-modal="true" bind:this={modal}> -->
+	<!-- <slot name="header"></slot>
 	<hr>
 	<slot></slot>
-	<hr>
+	<hr> -->
 
 	<!-- svelte-ignore a11y-autofocus -->
-  <button autofocus on:click={close}>Cancel</button>
+  <!-- <button class="nes-btn is-error" autofocus on:click={close}>Cancel</button>
   {#if confirmButton}
-  <button on:click={confirm}>{confirmButton}</button>
-  {/if}
-</div>
+  <button class="nes-btn is-success" on:click={confirm}>{confirmButton}</button>
+  {/if} -->
+<!-- </div> -->
+
+<dialog class="nes-dialog" id="dialog-default" open="true">
+  <form method="dialog">
+    <p class="title"><slot name="header"></slot></p>
+    <slot></slot>
+    <menu class="dialog-menu">
+      <button class="nes-btn is-error" on:click={close}>Cancel</button>
+      {#if confirmButton}
+      <button class="nes-btn is-success" on:click={confirm}>{confirmButton}</button>
+      {/if}
+    </menu>
+  </form>
+</dialog>
 
 <style>
-	.modal-background {
+	/* .modal-background {
 		position: fixed;
 		top: 0;
 		left: 0;
@@ -83,5 +96,5 @@
 
 	button {
 		display: block;
-	}
+	} */
 </style>

@@ -5,22 +5,33 @@
 
   let name = "";
   let useGSN = false;
+  let useDAI = false;
+
+  $: daiChoice = useGSN && useDAI;
 </script>
 
 {#if $wallet.status === "Ready"}
 
 {#if $wallet.chain.status === "Ready"}
-<Modal on:close="{() => userflow.cancel()}" confirmButton="Confirm" on:confirm="{() => userflow.setName_confirm(name, useGSN)}">
-  <h2 slot="header">
-   Set Your Name
-  </h2>
+<Modal on:close="{() => userflow.cancel()}" confirmButton="Confirm" on:confirm="{() => userflow.setName_confirm(name, useGSN, useDAI)}">
+  <!-- <p slot="header"></p> -->
 
-  <div>
-    <!-- TODO show DAI balance and warn when cannot buy // DAI balance could be shown in navbar (once connected)-->
-    <input type="checkbox" id="useGSN" name="useGSN" bind:checked={useGSN}><label for="useGSN">use GSN</label>
-  
-    <input type="text" id="name" name="name" bind:value="{name}"/>
-    <label for="name">Name</label>
+  <section class="nes-container with-title">
+    <h3 class="title">openGSN</h3>
+    <div id="checkboxes" class="item">
+      <label>
+        <input type="checkbox" class="nes-checkbox" bind:checked={useGSN}>
+        <span>GSN</span>
+      </label>
+      <label>
+        <input type="checkbox" class="nes-checkbox" bind:checked="{daiChoice}" class:disabled="{!useGSN}" disabled={!useGSN}>
+        <span class:disabled="{!useGSN}">DAI</span>
+      </label>
+    <div>
+  </section>
+  <div class="nes-field">
+    <label for="name_field">Your name</label>
+    <input type="text" id="name_field" class="nes-input" bind:value="{name}">
   </div>
 </Modal>
 {:else}

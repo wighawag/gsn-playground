@@ -5,11 +5,11 @@
 {JSON.stringify($wallet, null, '  ')}
 
 <br/>
-<button on:click="{() => wallet.probeBuiltin()}">probeBuiltin</button><br/>
-<button on:click="{() => wallet.connect('builtin')}">builtin</button><br/>
-<button on:click="{() => wallet.connect('portis')}">portis</button><br/>
+<button class="nes-btn" on:click="{() => wallet.probeBuiltin()}">probeBuiltin</button><br/>
+<button class="nes-btn" on:click="{() => wallet.connect('builtin')}">builtin</button><br/>
+<button class="nes-btn" on:click="{() => wallet.connect('portis')}">portis</button><br/>
 
-<button on:click="{() => wallet.unlock()}">unlock</button><br/>
+<button class="nes-btn" on:click="{() => wallet.unlock()}">unlock</button><br/>
 
 <!-- 
 {#if !$names.status}
