@@ -3,13 +3,10 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import alias from '@rollup/plugin-alias';
-import builtins from 'rollup-plugin-node-builtins';
-import globals from 'rollup-plugin-node-globals';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 import copy from 'rollup-plugin-copy'
 import del from 'del'
-
 
 
 const staticDir = 'static'
@@ -34,13 +31,6 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
       ...output
     },
     plugins: [
-      alias({
-        entries: [
-          { find: 'contractsInfo', replacement: './src/contracts/development.json' },
-        ]
-      }),
-      globals(),
-      builtins(),
       copy({
         targets: [
           { src: staticDir + '/**/!(__index.html)', dest: distDir },
@@ -59,24 +49,20 @@ function createConfig({ output, inlineDynamicImports, plugins = [] }) {
           css.write(`${buildDir}/bundle.css`);
         }
       }),
-
-      // If you have external dependencies installed from
-      // npm, you'll most likely need these plugins. In
-      // some cases you'll need additional configuration —
-      // consult the documentation for details:
-      // https://github.com/rollup/rollup-plugin-commonjs
+      alias({
+        entries: [
+          { find: 'contractsInfo', replacement: './src/contracts/development.json' },
+        ]
+      }),
       resolve({
+        mainFields: ["browser"],
         browser: true,
         dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/')
       }),
-      commonjs({
-        namedExports: {
-          "node_modules/bn.js/lib/bn.js" : ["BN"],
-          "node_modules/elliptic/lib/elliptic.js": ["ec"],
-          "node_modules/scrypt-js/scrypt.js": ["syncScrypt", "scrypt"],
-        }
-      }),
+      commonjs(),
       json(),
+      // globals(),
+      // builtins(),
 
       // If we're building for production (npm run build
       // instead of npm run dev), minify

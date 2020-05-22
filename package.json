@@ -15,6 +15,7 @@
     "packages": [
       "contracts",
       "webapp",
+      "webapp-with-routify",
       "subgraph",
       "web3w",
       "web3w-portis"
@@ -26,6 +27,8 @@
       "gsn-playground-contracts/@nomiclabs/buidler/**",
       "gsn-playground-contracts/buidler-deploy",
       "gsn-playground-contracts/buidler-ethers-v5",
+      "gsn-playground-webapp-with-routify",
+      "gsn-playground-webapp-with-routify/**",
       "gsn-playground-webapp",
       "gsn-playground-webapp/**"
     ]
