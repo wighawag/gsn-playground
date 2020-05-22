@@ -16,7 +16,8 @@
       "contracts",
       "webapp",
       "subgraph",
-      "web3w"
+      "web3w",
+      "web3w-portis"
     ],
     "nohoist": [
       "gsn-playground-subgraph/@graphprotocol/graph-ts",
@@ -48,6 +49,8 @@
     "webapp": "npm --prefix webapp run dev",
     "shell:webapp": "newsh \"npm run webapp\"",
     "dev": "npm-run-all -l externals-down --parallel webapp externals gsn:bootstrap --sequential subgraph:setup contracts:deploy subgraph:deploy",
-    "shell:dev": "npm-run-all -l externals-down --parallel shell:webapp shell:externals shell:gsn:bootstrap --sequential subgraph:setup contracts:deploy subgraph:deploy"
+    "shell:dev": "npm-run-all -l externals-down --parallel shell:webapp shell:externals shell:gsn:bootstrap --sequential subgraph:setup contracts:deploy subgraph:deploy",
+
+    "staging:subgraph:deploy": "npm --prefix subgraph run thegraph:deploy ../contracts/deployments/kovan kovan"
   }
 }

@@ -151,6 +151,7 @@ export default dataStore = {
             userName
           );
         } catch (e) {
+          console.error(e);
           return cancel();
         }
       } else {
@@ -204,15 +205,11 @@ export default dataStore = {
           return cancel();
         }
         
-
-        // bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId)");
-        // bytes32 constant EIP712DOMAIN_NAME = keccak256("ForwarderRegistry");
-        // bytes32 constant APPROVAL_TYPEHASH = keccak256("ApproveForwarder(address signer,uint256 nonce,address forwarder,bool approved)");
-        
         const {to, data} = await wallet.contracts.GSNPlayground.populateTransaction.setName(userName);
         try {
-          tx = await gsnContracts.ForwarderRegistry.approveAndForward(signature, to, data, {gasLimit: 3000000}); // gasLimit is necessary else ethers will reject the tx as failing
+          tx = await gsnContracts.ForwarderRegistry.functions.approveAndForward(signature, to, data, {gasLimit: 3000000}); // gasLimit is necessary else ethers will reject the tx as failing
         } catch(e) {
+          console.error(e);
           return cancel();
         }
       }
@@ -221,6 +218,7 @@ export default dataStore = {
       try {
         tx = await wallet.contracts.GSNPlayground._proxiedContract.functions.setName(userName);
       } catch (e) {
+        console.error(e);
         return cancel();
       }
     }

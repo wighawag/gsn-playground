@@ -6,7 +6,7 @@ const pkg = require("./package.json");
 const dotEnv = require("dotenv-webpack");
 
 const env = (process.env.ENV || process.env.NODE_ENV || "production").trim();
-const dev = env === "development";
+const dev = env === "development" || process.env.NODE_ENV === "development";
 
 const environments = {
   production: {
@@ -15,7 +15,7 @@ const environments = {
   },
   staging: {
     contracts: "./src/contracts/staging.json",
-    mode: "production"
+    mode: dev ? "development" : "production"
   },
   development: {
     contracts: "./src/contracts/development.json",

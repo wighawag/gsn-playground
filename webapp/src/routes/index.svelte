@@ -15,6 +15,7 @@
 
   import {BigNumber} from "@ethersproject/bignumber";
 
+  import Modal from '../components/Modal.svelte';
   import SetUserNameFlow from "../flows/SetUserNameFlow";
   const flows = {SetUserNameFlow}
 </script>
@@ -43,7 +44,6 @@
   
       <!-- About -->
       <section class="topic">
-        <h2># Set Your Name</h2>
         <button class="nes-btn is-primary" on:click="{() => userflow.setName_start()}">Set your Name</button>
       </section>
 
@@ -67,4 +67,12 @@
   </div>
 </div>
 
+{#if $wallet.chain && $wallet.chain.notSupported}
+<Modal on:close="{() => location.reload()}" cancelButton="reload">Chain not supported</Modal> <!-- support -->
+{:else if $wallet.error}
+<Modal on:close="{() => wallet.aknowledgeError()}">Error: {$wallet.error.message}</Modal>
+{:else if $wallet.chain && $wallet.chain.error}
+<Modal on:close="{() => wallet.aknowledgeError()}">Error: {$wallet.chain.error.message}</Modal>
+{:else}
 <svelte:component this={flows[$userflow.flow]}/>
+{/if}

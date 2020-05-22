@@ -18,7 +18,7 @@ function listen() {
       try {
         balance = await wallet.contracts.DAI.callStatic.balanceOf(wallet.address);
       } catch (e) {
-
+        console.log('DAI error', e);
       }
       if (balance && _interval) {
         _set({balance});

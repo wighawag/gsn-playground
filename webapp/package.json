@@ -24,6 +24,7 @@
     "subscriptions-transport-ws": "^0.9.0",
     "svelte-apollo": "^0.3.0",
     "web3w": "0.0.1",
+    "web3w-portis": "0.0.1",
     "websocket": "^1.0.31"
   },
   "devDependencies": {
@@ -38,7 +39,7 @@
     "polka": "^0.5.2",
     "prettier": "^1.19.1",
     "prettier-plugin-svelte": "^0.7.0",
-    "sapper": "^0.27.12",
+    "sapper": "git://github.com/wighawag/sapper.git#relative_baseUrl",
     "sirv-cli": "^0.4.5",
     "svelte": "^3.0.0",
     "svelte-loader": "^2.9.0",
@@ -48,8 +49,10 @@
   "scripts": {
     "postinstall": "node ./.setup.js",
     "dev": "sapper dev",
+    "staging:dev": "cross-env ENV=staging sapper dev",
     "build": "sapper build",
     "export": "sapper export",
+    "export:staging": "cross-env ENV=staging sapper export --relative-basepath",
     "start": "node __sapper__/build"
   }
 }

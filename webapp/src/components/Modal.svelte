@@ -2,6 +2,7 @@
 	import { createEventDispatcher, onDestroy } from 'svelte';
 
   export let confirmButton = false;
+  export let cancelButton = "Cancel";
 
 	const dispatch = createEventDispatcher();
   const close = () => dispatch('close');
@@ -62,7 +63,7 @@
     <p class="title"><slot name="header"></slot></p>
     <slot></slot>
     <menu class="dialog-menu">
-      <button class="nes-btn is-error" on:click={close}>Cancel</button>
+      <button class="nes-btn is-error" on:click={close}>{cancelButton}</button>
       {#if confirmButton}
       <button class="nes-btn is-success" on:click={confirm}>{confirmButton}</button>
       {/if}

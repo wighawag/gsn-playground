@@ -447,6 +447,8 @@ let _web3Provider;
 let _builtinEthersProvider;
 let _builtinWeb3Provider;
 let _chainConfigs;
+let _currentModule;
+let _selection;
 
 function isHex(value) {
   return typeof value === 'string' && value.length > 2 && value.slice(0,2).toLowerCase() === "0x";
@@ -543,31 +545,27 @@ async function setupChain(address) {
       if (chainId == chainConfigs.chainId || chainId == toDecimal(chainConfigs.chainId)) {
         contractsInfos = chainConfigs.contracts;
       } else {
-        const error = new Error(`chainConfig only available for ${chainConfigs.chainId} , not available for ${chainId}`);
+        const error = {message: `chainConfig only available for ${chainConfigs.chainId} , not available for ${chainId}`};
         set({chain: {error, chainId, notSupported: true}});
-        throw error;
-      }
+        throw new Error(error.message);      }
     } else {
       const chainConfig = chainConfigs[chainId] || chainConfigs[toHex(chainId)];
       if (!chainConfig) {
-        const error = new Error(`chainConfig not available for ${chainId}`);
+        const error = {message:`chainConfig not available for ${chainId}`};
         set({chain: {error, chainId, notSupported: true}});
-        throw error;
-      } else {
+        throw new Error(error.message);      } else {
         contractsInfos = chainConfig.contracts;
       }
     }
     for (const contractName of Object.keys(contractsInfos)) {
       if (contractName === "status") {
-        const error = new Error(`invalid name for contract : "status"`);
+        const error = {message: `invalid name for contract : "status"`};
         set({chain: {error}});
-        throw error;
-      }
+        throw new Error(error.message);      }
       if (contractName === "error") {
-        const error = new Error(`invalid name for contract : "error"`);
+        const error = {message: `invalid name for contract : "error"`};
         set({chain: {error}});
-        throw error;
-      }
+        throw new Error(error.message);      }
       const contractInfo = contractsInfos[contractName];
       if (contractInfo.abi) {
         contractsToAdd[contractName] = proxyContract(new Contract(contractInfo.address, contractInfo.abi, _ethersProvider.getSigner(address)), contractName, _observers);
@@ -599,10 +597,10 @@ async function setupChain(address) {
 
 async function select(type) {
   if (!type) {
-    if (!$wallet.selection || $wallet.selection.length === 0) {
+    if (_selection.length === 0) {
       type = "builtin";
-    } else if($wallet.selection.length === 1) {
-      type = $wallet.selection[0];
+    } else if(_selection.length === 1) {
+      type = _selection[0];
     } else {
       const message = `No Wallet Type Specified, choose from ${$wallet.selection}`;
       // set({error: {message, code: 1}}); // TODO code
@@ -623,6 +621,25 @@ async function select(type) {
     await probeBuiltin();
     _ethersProvider = _builtinEthersProvider;
     _web3Provider = _builtinWeb3Provider;
+  } else {
+    let module;
+    if (typeof type === "string") {
+      if (_selection) {
+        for (const choice of _selection) {
+          if (typeof choice !== "string" && choice.id === type) {
+            module = choice;
+          }
+        }
+      }
+    } else {
+      module = type;
+      type = module.id;
+    }
+
+    const {chainId, web3Provider} = await module.setup(module.config); // TODO pass config in select to choose network
+    _web3Provider = web3Provider;
+    _ethersProvider = proxyWeb3Provider(new Web3Provider(_web3Provider), _observers);
+    _currentModule = module;
   }
 
   if (!_ethersProvider) {
@@ -633,8 +650,8 @@ async function select(type) {
 
   let accounts;
   try {
-    if ($wallet.builtin.vendor === "Metamask") {
-      accounts = await timeout(1000, _ethersProvider.listAccounts(), {error: `Metamask timed out. Please reload the page (see <a href="https://github.com/MetaMask/metamask-extension/issues/7221">here</a>)`}); // TODO timeout checks (metamask, portis)
+    if (type === "builtin" && $wallet.builtin.vendor === "Metamask") {
+      accounts = await timeout(2000, _ethersProvider.listAccounts(), {error: `Metamask timed out. Please reload the page (see <a href="https://github.com/MetaMask/metamask-extension/issues/7221">here</a>)`}); // TODO timeout checks (metamask, portis)
     } else {
       // TODO timeout warning
       accounts = await timeout(20000, _ethersProvider.listAccounts());
@@ -643,6 +660,7 @@ async function select(type) {
     set({error: e});
     throw e;
   }
+  console.log({accounts});
   recordSelection(type);
   const address = accounts && accounts[0];
   if (address) {
@@ -713,7 +731,11 @@ async function connect(type) {
   return true;
 }
 
-function logout() {
+async function logout() {
+  if (_currentModule) {
+    await _currentModule.logout();
+    _currentModule = null;
+  }
   set({
     balance: {
       status: undefined, // Loading | Ready
@@ -729,6 +751,12 @@ function logout() {
     selected: undefined,
     
     error: undefined,
+    chain: {
+      status: undefined,
+      notSupported: undefined,
+      chainId: undefined,
+      error: undefined
+    },
     // pendingUserConfirmation: undefined, // TODO ? block logout on waiting ?
   });
   recordSelection("");
@@ -790,6 +818,9 @@ var index = (config) => {
     window.$wallet = $wallet;
     window.$transactions = $transactions;
   }
+
+  _selection = config.selection || [];
+  set({selection: _selection.map((m) => m.id || m)});
 
   if (process.browser) {
     if (config.autoSelectPrevious) {
