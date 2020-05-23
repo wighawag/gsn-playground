@@ -383,6 +383,8 @@ function proxyWeb3Provider(provider, observers) {
 
 let logger;
 
+const isBrowser = typeof window != "undefined";
+
 const $wallet = {
     builtin: {
       status: undefined, // Probing | Available | None | Error
@@ -822,7 +824,7 @@ var index = (config) => {
   _selection = config.selection || [];
   set({selection: _selection.map((m) => m.id || m)});
 
-  if (process.browser) {
+  if (isBrowser) {
     if (config.autoSelectPrevious) {
       const type = fetchPreviousSelection();
       if (type && type !== "") {
