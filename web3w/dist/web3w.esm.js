@@ -731,6 +731,11 @@ async function connect(type) {
   return true;
 }
 
+function acknowledgeError(field) {
+  // TODO other:
+  logout();
+}
+
 async function logout() {
   if (_currentModule) {
     await _currentModule.logout();
@@ -842,6 +847,7 @@ var index = (config) => {
       probeBuiltin,
       connect,
       unlock,
+      acknowledgeError,
       get contracts() {
         return $wallet.contracts;
       },

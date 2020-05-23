@@ -361,10 +361,14 @@ async function connect(type) {
   return true;
 }
 
-function aknowledgeError(field) {
-  if (field === "builtin") {
-
+function acknowledgeError(field) {
+  if (!field) {
+    // TODO think more
+  } else if (field === "builtin") {
+    // TODO
   }
+  // TODO other:
+  logout();
 }
 
 async function logout() {
@@ -478,6 +482,7 @@ export default (config) => {
       probeBuiltin,
       connect,
       unlock,
+      acknowledgeError,
       get contracts() {
         return $wallet.contracts;
       },

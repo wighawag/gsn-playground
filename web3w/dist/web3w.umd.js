@@ -733,6 +733,11 @@
       return true;
     }
 
+    function acknowledgeError(field) {
+      // TODO other:
+      logout();
+    }
+
     async function logout() {
       if (_currentModule) {
         await _currentModule.logout();
@@ -844,6 +849,7 @@
           probeBuiltin,
           connect,
           unlock,
+          acknowledgeError,
           get contracts() {
             return $wallet.contracts;
           },
