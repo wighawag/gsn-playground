@@ -70,9 +70,9 @@
 {#if $wallet.chain && $wallet.chain.notSupported}
 <Modal on:close="{() => location.reload()}" cancelButton="reload">Chain not supported</Modal> <!-- support -->
 {:else if $wallet.error}
-<Modal on:close="{() => wallet.aknowledgeError()}">Error: {$wallet.error.message}</Modal>
+<Modal on:close="{() => wallet.acknowledgeError()}">Error: {$wallet.error.message}</Modal>
 {:else if $wallet.chain && $wallet.chain.error}
-<Modal on:close="{() => wallet.aknowledgeError()}">Error: {$wallet.chain.error.message}</Modal>
+<Modal on:close="{() => wallet.acknowledgeError()}">Error: {$wallet.chain.error.message}</Modal>
 {:else}
 <svelte:component this={flows[$userflow.flow]}/>
 {/if}
