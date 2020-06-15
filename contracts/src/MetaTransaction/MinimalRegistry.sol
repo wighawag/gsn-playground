@@ -2,18 +2,13 @@ pragma solidity 0.6.5;
 contract ForwarderRegistry {
 
     /// @notice emitted for each Forwarder Approval or Disaproval
-    event ForwarderApproved(address indexed signer, address indexed forwarder, bool approved, uint256 nonce);
-
-    /// @notice return the current nonce for the signer/forwarder pair
-    function getNonce(address signer, address forwarder) external view returns(uint256) {
-        return uint256(_forwarders[signer][forwarder].nonce);
-    }
+    event ForwarderApproved(address indexed signer, address indexed forwarder);
 
     /// @notice return whether a forwarder is approved by a particular signer
     /// @param signer signer who authorized or not the forwarder
     /// @param forwarder meta transaction forwarder contract address
     function isForwarderFor(address signer, address forwarder) external view returns(bool) {
-        return forwarder == address(this) || _forwarders[signer][forwarder].approved == 1;
+        return forwarder == address(this) || _forwarders[signer][forwarder];
     }
 
     /// @notice approve forwarder using the forwarder (which is msg.sender)
@@ -29,17 +24,7 @@ contract ForwarderRegistry {
     /// @param to destination of the call (that will receive the meta transaction)
     /// @param data the content of the call (the signer address will be appended to it)
     function forward(bytes calldata signature, address to, bytes calldata data) external payable {
-        address signer = _getSigner();
-        _approveForwarder(signer, true, signature, false);
-
-        (bool success,) = to.call{value:msg.value}(abi.encodePacked(data, signer));
-        if (!success) {
-            assembly { // This assembly ensure the revert contains the exact string data
-                let returnDataSize := returndatasize()
-                returndatacopy(0, 0, returnDataSize)
-                revert(0, returnDataSize)
-            }
-        }
+        _forward(signature, to, data, false);
     }
 
     /// @notice approve and forward the meta transaction in one call.
@@ -48,8 +33,13 @@ contract ForwarderRegistry {
     /// @param to destination of the call (that will receive the meta transaction)
     /// @param data the content of the call (the signer address will be appended to it)
     function approveAndForward(bytes calldata signature, address to, bytes calldata data) external payable {
+        _forward(signature, to, data, true);
+    }
+    
+    // //////////////////////////////      INTERNAL         ////////////////////////////////////////
+    function _forward((bytes memory signature, address to, bytes memory data, bool save) internal {
         address signer = _getSigner();
-        _approveForwarder(signer, true, signature, true);
+        _approveForwarder(signer, true, signature, save);
 
         (bool success,) = to.call{value:msg.value}(abi.encodePacked(data, signer));
         if (!success) {
@@ -60,8 +50,7 @@ contract ForwarderRegistry {
             }
         }
     }
-    
-    // //////////////////////////////      INTERNAL         ////////////////////////////////////////
+
     function _getSigner() internal view returns(address signer) {
         bytes memory data = msg.data;
         uint256 length = msg.data.length;
@@ -70,9 +59,7 @@ contract ForwarderRegistry {
 
     function _approveForwarder(address signer, bool approved, bytes memory signature, bool save) internal {
         address forwarder = msg.sender;
-        Forwarder storage forwarderData = _forwarders[signer][forwarder];
-        uint256 nonce = uint256(forwarderData.nonce);
-        bytes memory dataToHash = _encodeMessage(signer, nonce, forwarder, approved);
+        bytes memory dataToHash = _encodeMessage(signer, forwarder);
 
         if (Utilities.isContract(signer)) {
             try ERC1271(signer).isValidSignature(dataToHash, signature) returns (bytes4 value) {
@@ -88,13 +75,8 @@ contract ForwarderRegistry {
         }
 
         if (save) {
-            if (approved) {
-                forwarderData.approved = 1;    
-            } else {
-                forwarderData.approved = 0
-                forwarderData.nonce = uint248(nonce+1);
-            }
-            emit ForwarderApproved(signer, forwarder, approved, nonce);
+            _forwarders[signer][forwarder] = true;
+            emit ForwarderApproved(signer, forwarder);
         }
     }
 
@@ -105,8 +87,8 @@ contract ForwarderRegistry {
     // //////////////////////////// SIGNED MESSAGE ENCODING //////////////////////////////////////////
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId)");
     bytes32 constant EIP712DOMAIN_NAME = keccak256("ForwarderRegistry");
-    bytes32 constant APPROVAL_TYPEHASH = keccak256("ApproveForwarder(address signer,uint256 nonce,address forwarder,bool approved)");
-    function _encodeMessage(address signer, uint256 nonce, address forwarder, bool approved) internal view returns (bytes memory) {
+    bytes32 constant APPROVAL_TYPEHASH = keccak256("ApproveForwarder(address signer,address forwarder)");
+    function _encodeMessage(address signer, address forwarder) internal view returns (bytes memory) {
         
         return abi.encodePacked(
             "\x19\x01",
@@ -118,19 +100,13 @@ contract ForwarderRegistry {
             keccak256(abi.encode(
                 APPROVAL_TYPEHASH,
                 signer,
-                nonce,
-                forwarder,
-                approved
+                forwarder
             ))
         );
     }
 
     // ////////////////////////////  INTERNAL STORAGE  ///////////////////////////////////////////
-    struct Forwarder { // pack nonce and approval together
-        uint248 nonce;
-        uint8 approved;
-    }
-    mapping(address => mapping(address => Forwarder)) internal _forwarders;
+    mapping(address => mapping(address => bool)) internal _forwarders;
 }
 
 library Utilities {
